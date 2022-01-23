@@ -37,8 +37,6 @@ public class DemoMain {
 
         String json = gson.toJson(map);
 
-        System.out.println(json);
-
         String appId = "用户唯一ID";
         String appKey = "用户唯一密钥";
         String publicKey = "用户RSA加密公钥";
