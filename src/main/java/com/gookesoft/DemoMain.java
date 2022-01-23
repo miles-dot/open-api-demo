@@ -11,6 +11,7 @@ import cn.hutool.crypto.symmetric.AES;
 import com.google.gson.Gson;
 import okhttp3.*;
 
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -27,7 +28,7 @@ public class DemoMain {
 
         String uri = "/xxxx/v1/task/list";
 
-        Map<String, Object> map = new HashMap<String, Object>() {{
+        Map<String, Object> map = new HashMap<String, Object>(2) {{
             put("taskId", "2020111214381881716");
             put("pageNo", "1");
         }};
@@ -35,6 +36,8 @@ public class DemoMain {
         Gson gson = new Gson();
 
         String json = gson.toJson(map);
+
+        System.out.println(json);
 
         String appId = "用户唯一ID";
         String appKey = "用户唯一密钥";
@@ -66,8 +69,9 @@ public class DemoMain {
                 .append("&");
         }
         String res = builder.substring(0, builder.length() - 1);
-
-        String s = SecureUtil.hmacSha256(appKey).digestHex(res);
+        char[] chars = res.toCharArray();
+        Arrays.sort(chars);
+        String s = SecureUtil.hmacSha256(appKey).digestHex(getBytes(chars));
         map.put("SIGNATURE_STR", s);
 
         json = gson.toJson(map);
@@ -110,5 +114,14 @@ public class DemoMain {
                 System.out.println(resp.string());
             }
         }
+    }
+
+    /**
+     * Chars 转 bytes
+     * @param chars
+     * @return
+     */
+    public static byte[] getBytes(char[] chars) {
+        return StandardCharsets.UTF_8.encode(CharBuffer.wrap(chars)).array();
     }
 }
