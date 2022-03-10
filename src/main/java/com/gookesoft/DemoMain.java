@@ -9,6 +9,7 @@ import cn.hutool.crypto.asymmetric.KeyType;
 import cn.hutool.crypto.asymmetric.RSA;
 import cn.hutool.crypto.symmetric.AES;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import okhttp3.*;
 
 import java.nio.CharBuffer;
@@ -29,7 +30,7 @@ public class DemoMain {
         String uri = "/xxxx/v1/task/list";
 
         Map<String, Object> map = new HashMap<String, Object>(2) {{
-            put("taskId", "2020111214381881716");
+            put("taskId", "2020103016025197840");
             put("pageNo", "1");
         }};
 
@@ -43,15 +44,15 @@ public class DemoMain {
 
         String str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-        String nonce = RandomUtil.randomString(str, 32);
-        String time = String.valueOf(System.currentTimeMillis());
+        String nonceStr = RandomUtil.randomString(str, 32);
+        String timestamp = String.valueOf(System.currentTimeMillis());
 
         TreeMap<String, String> treeMap = new TreeMap<>();
 
         treeMap.put("appId", appId);
-        treeMap.put("nonce", nonce);
         treeMap.put("method", "POST");
-        treeMap.put("timestamp", time);
+        treeMap.put("timestamp", timestamp);
+        treeMap.put("nonceStr", nonceStr);
         treeMap.put("body", json);
         treeMap.put("uri", uri);
 
@@ -69,8 +70,7 @@ public class DemoMain {
         String res = builder.substring(0, builder.length() - 1);
         char[] chars = res.toCharArray();
         Arrays.sort(chars);
-        String s = SecureUtil.hmacSha256(appKey).digestHex(getBytes(chars));
-        map.put("SIGNATURE_STR", s);
+        String signStr = SecureUtil.hmacSha256(appKey).digestHex(getBytes(chars));
 
         json = gson.toJson(map);
 
@@ -89,14 +89,15 @@ public class DemoMain {
 
         String enc = rsa.encryptBase64(aesKey, KeyType.PublicKey);
 
-        String reqId = RandomUtil.randomString(str, 32);
+        String requestId = RandomUtil.randomString(str, 32);
 
-        Map<String, String> param = new HashMap<>();
+        Map<String, String> param = new HashMap<>(7);
 
-        param.put("reqId", reqId);
         param.put("appId", appId);
-        param.put("nonce", nonce);
-        param.put("timestamp", time);
+        param.put("signStr", signStr);
+        param.put("requestId", requestId);
+        param.put("timestamp", timestamp);
+        param.put("nonceStr", nonceStr);
         param.put("aesKey", enc);
         param.put("body", json);
 
@@ -109,7 +110,13 @@ public class DemoMain {
         try (Response response = client.newCall(request).execute()) {
             ResponseBody resp = response.body();
             if (!Objects.isNull(resp)) {
-                System.out.println(resp.string());
+                JsonObject jsonObject = gson.fromJson(resp.string(), JsonObject.class);
+                if (jsonObject.get("status").getAsInt() != 200) {
+                    System.out.println("请求出错:" + jsonObject.get("message").getAsString());
+                } else {
+                    String data = jsonObject.get("result").getAsString();
+                    System.out.println(aes.decryptStr(data));
+                }
             }
         }
     }
