@@ -34,7 +34,9 @@ public class DemoMain {
             put("pageNo", "1");
         }};
 
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder()
+            .disableHtmlEscaping()
+            .create();
 
         String json = gson.toJson(map);
 
